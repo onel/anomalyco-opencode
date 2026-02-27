@@ -108,6 +108,160 @@ This is currently on our roadmap. If you're interested, **<a href={email}>let us
 
 ---
 
+## Managed Configuration
+
+Managed configuration allows administrators to enforce organization-wide settings that users cannot override. This is critical for enterprise deployments where security policies and configuration restrictions must be consistently applied across all users.
+
+---
+
+### How it works
+
+OpenCode checks for a managed configuration file in system directories during startup. If found, settings from this file take the highest priority and override all user and project configurations.
+
+This ensures that administrative policies are enforced regardless of individual user settings.
+
+---
+
+### Configuration locations
+
+The managed configuration directory varies by platform:
+
+- **macOS**: `/Library/Application Support/opencode`
+- **Windows**: `%ProgramData%\opencode` (typically `C:\ProgramData\opencode`)
+- **Linux**: `/etc/opencode`
+
+Place your `opencode.json` or `opencode.jsonc` file in the appropriate directory for your platform.
+
+:::note
+These directories require administrator privileges to write to. Users cannot modify managed configuration files.
+:::
+
+---
+
+### Creating managed config
+
+To create a managed configuration:
+
+1. Create the system directory for your platform if it doesn't exist.
+
+2. Create an `opencode.json` file in that directory with your organization's required settings.
+
+3. Set appropriate file permissions to ensure only administrators can modify it.
+
+Example managed configuration:
+
+```json title="/Library/Application Support/opencode/opencode.json"
+{
+  "$schema": "https://opencode.ai/config.json",
+  "share": "disabled",
+  "enabled_providers": ["your-internal-gateway"],
+  "permission": {
+    "bash": "ask",
+    "edit": "ask"
+  },
+  "autoupdate": false
+}
+```
+
+This configuration:
+- Disables the share feature
+- Restricts providers to only your internal gateway
+- Requires user approval for bash and edit operations
+- Disables automatic updates
+
+---
+
+### Priority and precedence
+
+Managed configuration has the highest priority in OpenCode's configuration system. It loads after all other configuration sources and overrides conflicting settings.
+
+The complete precedence order is:
+
+1. Remote config (organizational defaults)
+2. Global config (user preferences)
+3. Custom config (environment variable)
+4. Project config (project-specific)
+5. `.opencode` directories
+6. Inline config (environment variable)
+7. **Managed config (highest priority)**
+
+Settings from managed config cannot be overridden by users in their global or project configurations.
+
+---
+
+### Use cases
+
+Common scenarios for managed configuration:
+
+**Restrict AI providers**
+
+Ensure all users connect only to approved AI providers:
+
+```json
+{
+  "enabled_providers": ["your-internal-gateway"],
+  "disabled_providers": ["openai", "anthropic", "gemini"]
+}
+```
+
+**Enforce security policies**
+
+Require approval for sensitive operations:
+
+```json
+{
+  "permission": {
+    "bash": "ask",
+    "edit": "ask",
+    "external_directory": "deny"
+  }
+}
+```
+
+**Disable features**
+
+Turn off features not allowed in your organization:
+
+```json
+{
+  "share": "disabled",
+  "autoupdate": false,
+  "snapshot": false
+}
+```
+
+**Configure internal tools**
+
+Set up organization-wide MCP servers or plugins:
+
+```json
+{
+  "mcp": {
+    "internal-tools": {
+      "type": "remote",
+      "url": "https://tools.company.com/mcp",
+      "enabled": true
+    }
+  },
+  "plugin": ["@company/opencode-compliance"]
+}
+```
+
+---
+
+### Testing managed config
+
+For development and testing, you can simulate managed configuration without requiring administrator privileges using the `OPENCODE_TEST_MANAGED_CONFIG_DIR` environment variable:
+
+```bash
+export OPENCODE_TEST_MANAGED_CONFIG_DIR=/path/to/test/config
+opencode run "test command"
+```
+
+This loads configuration from the specified directory with managed config priority, allowing you to verify settings before deploying to production system directories.
+
+---
+
 ## FAQ
 
 <details>
